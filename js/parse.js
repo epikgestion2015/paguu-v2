@@ -433,21 +433,24 @@
     var tax = r2(base * (+igic || 0) / 100);
     return { base: base, tax: tax, total: r2(base + tax) };
   }
-  function siguienteNumero(facturas, fechaIso) {
-    var y = String(fechaIso || iso(new Date())).slice(0, 4), max = 0;
-    (facturas || []).forEach(function (f) {
-      var m = String(f.number || '').match(/^F(\d{4})-(\d+)$/);
+  // Numeración por año: F2026-0001 (facturas) o P2026-0001 (presupuestos).
+  function siguienteNumero(docs, fechaIso, prefijo) {
+    var pre = prefijo || 'F', y = String(fechaIso || iso(new Date())).slice(0, 4), max = 0;
+    var re = new RegExp('^' + pre + '(\\d{4})-(\\d+)$');
+    (docs || []).forEach(function (f) {
+      var m = String(f.number || '').match(re);
       if (m && m[1] === y) max = Math.max(max, +m[2]);
     });
     var n = String(max + 1); while (n.length < 4) n = '0' + n;
-    return 'F' + y + '-' + n;
+    return pre + y + '-' + n;
   }
+  function validaEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s || '').trim()); }
 
   var api = {
     MESES: MESES, norm: norm, iso: iso, fromIso: fromIso, parseNum: parseNum, palabrasANumeros: palabrasANumeros,
     parseFecha: parseFecha, validaNif: validaNif, cifControl: cifControl, parseIgic: parseIgic,
     parseVozFactura: parseVozFactura, parsePregunta: parsePregunta, buscaCliente: buscaCliente,
-    parseAlbaran: parseAlbaran, totales: totales, siguienteNumero: siguienteNumero, r2: r2, titulo: titulo
+    parseAlbaran: parseAlbaran, totales: totales, siguienteNumero: siguienteNumero, validaEmail: validaEmail, limpiaId: limpiaId, r2: r2, titulo: titulo
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PV2 = api;

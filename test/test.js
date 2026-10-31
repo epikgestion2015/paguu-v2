@@ -146,5 +146,19 @@ t('albarán vacío: avisos', () => { const r = P.parseAlbaran('xx', {}); assert(
 t('totales IGIC 7%', () => eq(P.totales([{ qty: 3, price: 33.33 }], 7), { base: 99.99, tax: 7, total: 106.99 }));
 t('numeración automática por año', () => { eq(P.siguienteNumero([{ number: 'F2026-0007' }, { number: 'F2026-0012' }, { number: 'F2025-0099' }], '2026-10-29'), 'F2026-0013'); eq(P.siguienteNumero([], '2027-01-02'), 'F2027-0001'); });
 
+t('numeración presupuestos P2026-0001', () => {
+  eq(P.siguienteNumero([], '2026-10-29', 'P'), 'P2026-0001');
+  eq(P.siguienteNumero([{ number: 'P2026-0004' }, { number: 'F2026-0099' }], '2026-10-29', 'P'), 'P2026-0005');
+  eq(P.siguienteNumero([{ number: 'P2026-0004' }], '2026-10-29', 'F'), 'F2026-0001');
+});
+t('validación NIF/NIE/CIF: más casos', () => {
+  eq(P.validaNif('12345678Z'), { ok: true, tipo: 'NIF' });
+  eq(P.validaNif('Y0000000Z').tipo, 'NIE');
+  eq(P.validaNif('Q0000000J').ok, true);      // CIF con letra de control
+  eq(P.validaNif('Q00000000').ok, false);     // tipo Q exige letra
+  eq(P.validaNif('ABC').ok, false); eq(P.validaNif('').ok, false);
+});
+t('validación email', () => { eq(P.validaEmail('demo@ejemplo.test'), true); eq(P.validaEmail('demo@'), false); eq(P.validaEmail('sin arroba.es'), false); });
+
 console.log(`\n${ok} correctas, ${fail} fallidas`);
 process.exit(fail ? 1 : 0);
