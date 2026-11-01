@@ -4,7 +4,11 @@
   'use strict';
   var P = window.PV2;
   var KEY = 'paguuV2.datos.v2', KEY_V1 = 'paguuV2.datos.v1';
-  var EMPRESA = { name: 'EMPRESA DEMO PAGUU SL', nif: 'B00000992', address: 'Calle Ficticia 1, 35000 Las Palmas de Gran Canaria (dirección inventada)' };
+  var EMPRESA = { name: 'EMPRESA DEMO PAGUU SL', comercial: 'Demo Paguu', nif: 'B00000992', address: 'Calle Ficticia 1, 35000 Las Palmas de Gran Canaria (dirección inventada)',
+    phone: '600 000 000', email: 'demo@ejemplo.test', iban: 'ES2800000000001234567890', nota: 'Gracias por su confianza.', color: 'turquesa', logo: '' };
+  // Colores de acento para las facturas (dentro de la paleta PAGUU)
+  var ACENTOS = { turquesa: ['Turquesa', '#0891b2'], petroleo: ['Petróleo', '#0e7490'], noche: ['Azul noche', '#142033'], verde: ['Verde', '#0f8a5f'] };
+  var LOGO_MAX = 350000; // tamaño máximo del logo guardado (caracteres del dataURL, ~250 KB)
   var IGICS = [[7, '7 % (general)'], [3, '3 % (reducido)'], [0, '0 % (sin IGIC)'], [9.5, '9,5 %'], [15, '15 %']];
   var ESTADOS = { pendiente: '⏳ Pendiente', aceptado: '✅ Aceptado', rechazado: '❌ Rechazado' };
   var app = document.getElementById('app');
@@ -12,7 +16,8 @@
 
   // ---------- utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function euros(n) { return (+n || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; }
+  function euros(n) { return P.fmtNum(n) + ' €'; }
+  function cantidad(n) { n = +n || 0; return n % 1 ? P.fmtNum(n, 2).replace(/0$/, '') : P.fmtNum(n, 0); }
   function hoy() { return P.iso(new Date()); }
   function fechaBonita(iso) { if (!iso) return ''; var d = P.fromIso(iso); return d.getDate() + ' de ' + P.MESES[d.getMonth()] + ' de ' + d.getFullYear(); }
   function fechaCorta(iso) { var p = String(iso).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
@@ -86,6 +91,8 @@
       guarda();
     }
     D.presupuestos = D.presupuestos || []; D.clientes = D.clientes || [];
+    D.empresa = D.empresa || {};
+    Object.keys(EMPRESA).forEach(function (k) { if (D.empresa[k] == null) D.empresa[k] = D.empresa.name === EMPRESA.name || !D.empresa.name ? EMPRESA[k] : (k === 'color' ? 'turquesa' : ''); });
   }
   function guarda() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { aviso('No se ha podido guardar en este navegador.'); } }
   function clientePorId(id) { for (var i = 0; i < D.clientes.length; i++) if (D.clientes[i].id === id) return D.clientes[i]; return null; }
@@ -167,6 +174,8 @@
       + '<a class="big blanco" id="irClientes" href="#/clientes"><span class="ico">👥</span><span>Clientes</span></a>'
       + '<a class="big blanco" id="irDocs" href="#/documentos"><span class="ico">📂</span><span>Ver facturas y presupuestos</span></a>'
       + '</div>'
+      + '<a class="btn sec full config-btn" id="irConfig" href="#/config">⚙️ Configuración de factura <small>(logo y mis datos)</small></a>'
+      + (esDemo() ? '<div class="alerta no-print" id="avisoConfig">💡 Ponga su logo o su nombre en <a href="#/config"><b>Configuración de factura</b></a> y saldrá en todas sus facturas.</div>' : '')
       + '<h2>Lo que he facturado</h2>'
       + '<div class="kpis">'
       + '<div class="kpi" id="kMes">Este mes (' + P.MESES[+mes.slice(5) - 1] + ')<div class="n">' + euros(suma(fMes)) + '</div>' + plural(fMes.length, 'factura', 'facturas') + '</div>'
@@ -177,7 +186,7 @@
       + (ultimas.length ? '<ul class="lista" id="ultimas">' + ultimas.map(filaDoc).join('') + '</ul>' : '<p>Todavía no hay facturas.</p>')
       + '<h2>Presupuestos pendientes</h2>'
       + (pend.length ? '<ul class="lista" id="pendientes">' + pend.slice(0, 5).map(filaDoc).join('') + '</ul>' : '<p>No hay presupuestos pendientes.</p>')
-      + '<div class="pie no-print"><p>' + esc(D.empresa.name) + ' · ' + esc(D.empresa.nif) + ' (empresa inventada para la prueba)</p>'
+      + '<div class="pie no-print"><p>' + esc(D.empresa.name) + ' · ' + esc(D.empresa.nif) + (esDemo() ? ' (empresa inventada para la prueba)' : '') + '</p>'
       + '<p>Lo que escriba se guarda solo en este aparato.</p>'
       + '<button type="button" id="reset">Volver a poner los datos de prueba</button></div>';
     enlazaDocs();
@@ -427,16 +436,32 @@
     for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i];
     return null;
   }
+  function esDemo() { return D.empresa.nif === EMPRESA.nif; }
+  function acento() { return (ACENTOS[D.empresa.color] || ACENTOS.turquesa)[1]; }
   function hojaDoc(f) {
-    var factura = esF(f.tipo);
-    var filas = f.lines.map(function (l) { return '<tr><td>' + esc(l.concept) + '</td><td class="r">' + esc(String(l.qty).replace('.', ',')) + '</td><td class="r">' + euros(l.price) + '</td><td class="r">' + euros(P.r2(l.qty * l.price)) + '</td></tr>'; }).join('');
-    return '<div class="hoja" id="hoja"><div class="cab2"><div><h1>' + (factura ? 'FACTURA' : 'PRESUPUESTO') + '</h1><div>Número: <b>' + esc(f.number) + '</b></div><div>Fecha: <b>' + fechaCorta(f.date) + '</b></div>'
-      + (factura ? '' : '<div>Válido 30 días</div>') + '</div>'
-      + '<div style="text-align:right"><b>' + esc(D.empresa.name) + '</b><br>CIF ' + esc(D.empresa.nif) + '<br>' + esc(D.empresa.address) + '</div></div>'
-      + '<div style="margin:18px 0;padding:10px 0;border-top:1px solid #000;border-bottom:1px solid #000"><b>Cliente:</b> ' + esc(f.client.name) + (f.client.nif ? ' · NIF/CIF ' + esc(f.client.nif) : '') + (f.client.address ? '<br>' + esc(f.client.address) : '') + '</div>'
-      + '<table><thead><tr><th>Concepto</th><th class="r">Cantidad</th><th class="r">Precio</th><th class="r">Importe</th></tr></thead><tbody>' + filas + '</tbody></table>'
-      + '<div class="tot"><div><span>Base imponible</span><span>' + euros(f.base) + '</span></div><div><span>IGIC ' + String(f.igic).replace('.', ',') + ' %</span><span>' + euros(f.tax) + '</span></div><div class="g"><span>TOTAL</span><span>' + euros(f.total) + '</span></div></div>'
-      + '<p class="nota">' + (factura ? 'Factura' : 'Presupuesto') + ' de PRUEBA del piloto PAGUU V2, con datos inventados. No tiene validez fiscal ni está enviado a Verifactu.</p></div>';
+    var factura = esF(f.tipo), E = D.empresa, n = 0;
+    var filas = f.lines.map(function (l) {
+      n++;
+      return '<tr><td class="n">' + n + '</td><td>' + esc(l.concept) + '</td><td class="r">' + esc(cantidad(l.qty)) + '</td><td class="r">' + euros(l.price) + '</td><td class="r b">' + euros(P.r2(l.qty * l.price)) + '</td></tr>';
+    }).join('');
+    var marca = E.logo ? '<img class="h-logo" id="hLogo" src="' + esc(E.logo) + '" alt="' + esc(E.comercial || E.name) + '">'
+      : '<div class="h-marca" id="hMarca">' + esc(E.comercial || E.name) + '</div>';
+    var contacto = [E.phone ? '☎ ' + esc(E.phone) : '', E.email ? '✉ ' + esc(E.email) : ''].filter(Boolean).join(' · ');
+    var vence = '';
+    if (!factura) { var dv = P.fromIso(f.date); dv.setDate(dv.getDate() + 30); vence = '<div><span>Válido hasta</span><b>' + fechaCorta(P.iso(dv)) + '</b></div>'; }
+    var pago = factura && E.iban ? '<div class="h-pago" id="hPago"><div class="h-et">Forma de pago</div>Transferencia bancaria<br><b>IBAN ' + esc(P.ibanBonito(E.iban)) + '</b><br>Concepto: ' + esc(f.number) + '</div>'
+      : (!factura ? '<div class="h-pago"><div class="h-et">Condiciones</div>Presupuesto válido 30 días. Para aceptarlo, firme y devuélvalo o avísenos.</div>' : '');
+    return '<div class="hoja" id="hoja" style="--acento:' + acento() + '">'
+      + '<div class="h-cab"><div class="h-izq">' + marca + (E.logo || (E.comercial && E.comercial !== E.name) ? '<div class="h-razon">' + esc(E.name) + '</div>' : '') + '</div>'
+      + '<div class="h-der"><div class="h-tipo">' + (factura ? 'FACTURA' : 'PRESUPUESTO') + '</div>'
+      + '<div class="h-meta"><div><span>Nº</span><b>' + esc(f.number) + '</b></div><div><span>Fecha</span><b>' + fechaCorta(f.date) + '</b></div>' + vence + '</div></div></div>'
+      + '<div class="h-partes"><div class="h-parte" id="hEmisor"><div class="h-et">De</div><b>' + esc(E.name) + '</b><br>' + (E.nif ? 'NIF/CIF ' + esc(E.nif) + '<br>' : '') + (E.address ? esc(E.address) + '<br>' : '') + contacto + '</div>'
+      + '<div class="h-parte" id="hCliente"><div class="h-et">Para</div><b>' + esc(f.client.name) + '</b><br>' + (f.client.nif ? 'NIF/CIF ' + esc(f.client.nif) + '<br>' : '') + (f.client.address ? esc(f.client.address) : '') + '</div></div>'
+      + '<table class="h-tabla"><thead><tr><th class="n">#</th><th>Concepto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Importe</th></tr></thead><tbody>' + filas + '</tbody></table>'
+      + '<div class="h-final"><div class="h-izq2">' + pago + (f.fromBudget ? '<p class="h-peq">Según presupuesto ' + esc(f.fromBudget) + '.</p>' : '') + '</div>'
+      + '<div class="tot h-tot"><div><span>Base imponible</span><span>' + euros(f.base) + '</span></div><div><span>IGIC ' + String(f.igic).replace('.', ',') + ' %</span><span>' + euros(f.tax) + '</span></div><div class="g"><span>TOTAL</span><span>' + euros(f.total) + '</span></div></div></div>'
+      + '<div class="h-pie">' + (E.nota ? '<div class="h-nota" id="hNota">' + esc(E.nota) + '</div>' : '')
+      + '<p class="nota">' + (factura ? 'Factura' : 'Presupuesto') + ' de PRUEBA del piloto PAGUU V2' + (esDemo() ? ', con datos inventados' : '') + '. No tiene validez fiscal ni está enviado a Verifactu.</p></div></div>';
   }
   function pantallaDoc(id, recien) {
     var f = buscaDoc(id);
@@ -599,6 +624,88 @@
     }
   }
 
+  // ---------- CONFIGURACIÓN DE FACTURA ----------
+  function leeLogo(file) {
+    return new Promise(function (ok, ko) {
+      if (!file || !/^image\//.test(file.type || '')) return ko(new Error('Eso no es una imagen. Elija una foto o un dibujo (PNG o JPG).'));
+      if (file.size > 10e6) return ko(new Error('La imagen es demasiado grande (más de 10 MB).'));
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var w = img.naturalWidth || 300, h = img.naturalHeight || 120, k = Math.min(1, 600 / w, 240 / h);
+        var cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(w * k)); cv.height = Math.max(1, Math.round(h * k));
+        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, cv.width, cv.height);
+        var out = cv.toDataURL('image/png');
+        if (out.length > LOGO_MAX) { // si pesa mucho, JPG con fondo blanco
+          var cv2 = document.createElement('canvas'); cv2.width = cv.width; cv2.height = cv.height;
+          var c2 = cv2.getContext('2d'); c2.fillStyle = '#fff'; c2.fillRect(0, 0, cv2.width, cv2.height); c2.drawImage(cv, 0, 0);
+          out = cv2.toDataURL('image/jpeg', 0.85);
+        }
+        URL.revokeObjectURL(url);
+        if (out.length > LOGO_MAX) ko(new Error('El logo pesa demasiado. Pruebe con una imagen más sencilla.')); else ok(out);
+      };
+      img.onerror = function () { ko(new Error('No he podido abrir esa imagen.')); };
+      img.src = url;
+    });
+  }
+  function pantallaConfig() {
+    var E = D.empresa, tmp = { logo: E.logo || '', color: E.color || 'turquesa' };
+    function campo(idc, lbl, val, extra, ayuda) { return '<label for="' + idc + '">' + lbl + '</label><input id="' + idc + '" value="' + esc(val || '') + '"' + (extra || '') + '>' + (ayuda ? '<p class="ayuda">' + ayuda + '</p>' : ''); }
+    var opt = '<span style="font-weight:400">(si quiere)</span>';
+    app.innerHTML = '<h1>⚙️ Configuración de factura</h1>'
+      + '<p>Lo que ponga aquí sale en todas sus facturas y presupuestos.</p>'
+      + '<form id="eform" autocomplete="off" novalidate>'
+      + '<h2>1. Su logo o su nombre</h2>'
+      + '<div class="caja logo-caja"><div id="logoPrev"></div>'
+      + '<label class="btn sec full" for="elogo" style="margin:10px 0 0">🖼️ Subir mi logo</label>'
+      + '<input id="elogo" type="file" accept="image/*" style="position:absolute;left:-9999px">'
+      + '<button type="button" class="btn rojo full" id="equitalogo" style="margin-top:10px">✖ Quitar logo</button>'
+      + '<p class="ayuda">Si no tiene logo, no pasa nada: saldrá su nombre en grande.</p></div>'
+      + campo('ecom', 'Nombre que sale en grande ' + opt, E.comercial, ' placeholder="Ejemplo: Fontanería Pepe"', 'Su nombre comercial o su nombre de autónomo.')
+      + '<h2>2. Sus datos (obligatorios en la factura)</h2>'
+      + campo('enom', 'Nombre y apellidos o razón social', E.name, ' placeholder="Ejemplo: José Pérez López"')
+      + campo('enif', 'NIF, NIE o CIF', E.nif, ' placeholder="Ejemplo: 00000000T" autocapitalize="characters"') + '<p class="ayuda" id="enifinfo"></p>'
+      + campo('edir', 'Dirección', E.address, ' placeholder="Calle, número, código postal y pueblo"')
+      + '<h2>3. Contacto y cobro ' + opt + '</h2>'
+      + campo('etel', 'Teléfono', E.phone, ' type="tel" inputmode="tel" placeholder="Ejemplo: 600 000 000"')
+      + campo('email', 'Email', E.email, ' type="email" inputmode="email" placeholder="Ejemplo: nombre@correo.es"') + '<p class="ayuda" id="emailinfo"></p>'
+      + campo('eiban', 'IBAN para que le paguen', P.ibanBonito(E.iban), ' autocapitalize="characters" placeholder="ES00 0000 0000 0000 0000 0000"') + '<p class="ayuda" id="eibaninfo"></p>'
+      + campo('enota', 'Nota al pie', E.nota, ' placeholder="Ejemplo: Gracias por su confianza"')
+      + '<h2>4. Color de sus facturas</h2><div class="colores" role="radiogroup">'
+      + Object.keys(ACENTOS).map(function (k) { return '<label class="color"><input type="radio" name="ecolor" value="' + k + '"' + (tmp.color === k ? ' checked' : '') + '><span class="muestra" style="background:' + ACENTOS[k][1] + '"></span>' + ACENTOS[k][0] + '</label>'; }).join('')
+      + '</div>'
+      + '<div class="fila"><button type="submit" class="btn verde full" id="eguardar">✅ Guardar configuración</button></div>'
+      + '<div class="fila"><a class="btn sec full" href="#/">⬅ Volver sin guardar</a></div></form>';
+    var nif = document.getElementById('enif'), mail = document.getElementById('email'), iban = document.getElementById('eiban');
+    function info() {
+      document.getElementById('enifinfo').textContent = textoNif(nif.value);
+      document.getElementById('emailinfo').textContent = mail.value.trim() && !P.validaEmail(mail.value) ? '⚠ Revise el email: no parece correcto.' : '';
+      document.getElementById('eibaninfo').textContent = !iban.value.trim() ? '' : P.validaIban(iban.value) ? '✔ IBAN correcto' : '⚠ Revise el IBAN: no parece correcto.';
+    }
+    function pintaLogo() {
+      document.getElementById('logoPrev').innerHTML = tmp.logo ? '<img class="logo-prev" id="logoImg" src="' + esc(tmp.logo) + '" alt="Su logo">' : '<p class="sin-logo" id="sinLogo">Sin logo todavía</p>';
+      document.getElementById('equitalogo').hidden = !tmp.logo;
+    }
+    [nif, mail, iban].forEach(function (e) { e.addEventListener('input', info); }); info(); pintaLogo();
+    document.getElementById('elogo').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0]; if (!file) return;
+      leeLogo(file).then(function (url) { tmp.logo = url; pintaLogo(); aviso('Logo listo. Pulse Guardar configuración.'); }).catch(function (err) { aviso(err.message); });
+    });
+    document.getElementById('equitalogo').onclick = function () { tmp.logo = ''; pintaLogo(); };
+    app.querySelectorAll('input[name="ecolor"]').forEach(function (r) { r.addEventListener('change', function () { tmp.color = r.value; }); });
+    document.getElementById('eform').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = document.getElementById('enom').value.trim(), v = P.limpiaId(nif.value), em = mail.value.trim(), ib = P.limpiaIban(iban.value);
+      if (!name) { aviso('Falta su nombre o razón social.'); document.getElementById('enom').focus(); return; }
+      if (!v) { aviso('Falta su NIF, NIE o CIF: es obligatorio en las facturas.'); nif.focus(); return; }
+      if (!P.validaNif(v).ok && !confirm('El NIF/CIF «' + v + '» no parece correcto. ¿Guardarlo igual?')) return;
+      if (em && !P.validaEmail(em)) { aviso('Revise el email: no parece correcto.'); mail.focus(); return; }
+      if (ib && !P.validaIban(ib)) { aviso('Revise el IBAN: no parece correcto.'); iban.focus(); return; }
+      D.empresa = { name: name, comercial: document.getElementById('ecom').value.trim(), nif: v, address: document.getElementById('edir').value.trim(),
+        phone: document.getElementById('etel').value.trim(), email: em, iban: ib, nota: document.getElementById('enota').value.trim(), color: ACENTOS[tmp.color] ? tmp.color : 'turquesa', logo: tmp.logo };
+      guarda(); aviso('Configuración guardada. Ya sale en sus facturas.'); ir('#/');
+    });
+  }
+
   // ---------- rutas ----------
   function render() {
     var h = location.hash.replace(/^#\/?/, '').split('/');
@@ -613,12 +720,14 @@
       case 'documentos': borrador = null; pantallaDocumentos(h[1]); break;
       case 'clientes': borrador = null; pantallaClientes(); break;
       case 'cliente': borrador = null; pantallaCliente(h[1]); break;
+      case 'config': borrador = null; pantallaConfig(); break;
       default: borrador = null; pantallaInicio();
     }
     app.focus({ preventScroll: true });
   }
   document.getElementById('btnInicio').onclick = function () { borrador = null; ir('#/'); };
   window.addEventListener('hashchange', render);
+  window.PAGUUV2 = { recarga: function () { carga(); render(); } }; // usado por las pruebas
   carga();
   render();
 })();

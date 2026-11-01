@@ -160,5 +160,12 @@ t('validación NIF/NIE/CIF: más casos', () => {
 });
 t('validación email', () => { eq(P.validaEmail('demo@ejemplo.test'), true); eq(P.validaEmail('demo@'), false); eq(P.validaEmail('sin arroba.es'), false); });
 
+t('importes con punto de miles (1.428,19)', () => { eq(P.fmtNum(1428.19), '1.428,19'); eq(P.fmtNum(999.5), '999,50'); eq(P.fmtNum(1234567), '1.234.567,00'); eq(P.fmtNum(-1500.256), '-1.500,26'); eq(P.fmtNum(12, 0), '12'); });
+t('IBAN: validación y formato', () => {
+  eq(P.validaIban('ES28 0000 0000 0012 3456 7890'), true); eq(P.validaIban('ES9121000418450200051332'), true);
+  eq(P.validaIban('ES9121000418450200051333'), false); eq(P.validaIban('ES28 0000'), false); eq(P.validaIban(''), false);
+  eq(P.ibanBonito('es2800000000001234567890'), 'ES28 0000 0000 0012 3456 7890');
+});
+
 console.log(`\n${ok} correctas, ${fail} fallidas`);
 process.exit(fail ? 1 : 0);

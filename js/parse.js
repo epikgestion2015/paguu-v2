@@ -444,13 +444,31 @@
     var n = String(max + 1); while (n.length < 4) n = '0' + n;
     return pre + y + '-' + n;
   }
+  // 1428.19 -> "1.428,19" (con punto de miles siempre, también en números de 4 cifras)
+  function fmtNum(n, dec) {
+    dec = dec == null ? 2 : dec; n = +n || 0;
+    var neg = n < 0, p = Math.abs(n).toFixed(dec).split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return (neg && +p.join('.') !== 0 ? '-' : '') + p[0] + (dec ? ',' + p[1] : '');
+  }
+  function limpiaIban(s) { return String(s || '').toUpperCase().replace(/[\s-]/g, ''); }
+  function validaIban(s) {
+    s = limpiaIban(s);
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(s)) return false;
+    if (s.slice(0, 2) === 'ES' && s.length !== 24) return false;
+    var n = (s.slice(4) + s.slice(0, 4)).replace(/[A-Z]/g, function (c) { return c.charCodeAt(0) - 55; }), m = 0;
+    for (var i = 0; i < n.length; i++) m = (m * 10 + +n[i]) % 97;
+    return m === 1;
+  }
+  function ibanBonito(s) { return limpiaIban(s).replace(/(.{4})/g, '$1 ').trim(); }
   function validaEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(s || '').trim()); }
 
   var api = {
     MESES: MESES, norm: norm, iso: iso, fromIso: fromIso, parseNum: parseNum, palabrasANumeros: palabrasANumeros,
     parseFecha: parseFecha, validaNif: validaNif, cifControl: cifControl, parseIgic: parseIgic,
     parseVozFactura: parseVozFactura, parsePregunta: parsePregunta, buscaCliente: buscaCliente,
-    parseAlbaran: parseAlbaran, totales: totales, siguienteNumero: siguienteNumero, validaEmail: validaEmail, limpiaId: limpiaId, r2: r2, titulo: titulo
+    parseAlbaran: parseAlbaran, totales: totales, siguienteNumero: siguienteNumero, validaEmail: validaEmail, limpiaId: limpiaId, r2: r2, titulo: titulo,
+    fmtNum: fmtNum, validaIban: validaIban, limpiaIban: limpiaIban, ibanBonito: ibanBonito
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.PV2 = api;

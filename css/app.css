@@ -1,8 +1,8 @@
 /* Paleta tomada de PAGUU (paguu-app, tema claro + cabecera oscura del icono) */
-:root{--navy:#070b14;--navy2:#142033;--cian:#3ee0ff;--azul:#0891b2;--azul2:#0e7490;--verde:#0f8a5f;--verde2:#0b6b4a;--rojo:#b4333f;--gris:#5c6e84;--fondo:#eef3f8;--card:#ffffff;--suave:#f6f8fb;--linea:#b9c4dd;--borde:#5c6e84;--ink:#142033;--aviso-bg:#fff6df;--aviso-bd:#e4c98a;--aviso-ink:#6a4e10}
+:root{--navy:#070b14;--navy2:#142033;--cian:#3ee0ff;--azul:#0891b2;--azul2:#0e7490;--verde:#0f8a5f;--verde2:#0b6b4a;--rojo:#b4333f;--gris:#5c6e84;--fondo:#dcebf8;--card:#f7fbff;--suave:#eaf3fb;--linea:#b9c4dd;--borde:#5c6e84;--ink:#142033;--aviso-bg:#fff6df;--aviso-bd:#e4c98a;--aviso-ink:#6a4e10}
 *{box-sizing:border-box}
 html{font-size:22px;-webkit-text-size-adjust:100%}
-body{margin:0;font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--fondo);line-height:1.4}
+body{margin:0;background-image:linear-gradient(180deg,#e6f1fb 0,#d6e7f6 100%);background-attachment:fixed;min-height:100vh;font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--fondo);line-height:1.4}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--navy);color:#fff;border-bottom:3px solid var(--cian);position:sticky;top:0;z-index:5}
 .brand{font-size:1.4rem;letter-spacing:.14em;font-weight:800;display:flex;align-items:center;gap:10px}.brand img{width:44px;height:44px}.brand b{color:var(--cian)}.brand span{background:var(--cian);color:#04222c;border-radius:8px;padding:0 8px;font-weight:800;letter-spacing:0}
 .btn-home{font-size:1.1rem;font-weight:700;background:#fff;color:var(--navy2);border:3px solid var(--cian);border-radius:14px;padding:10px 18px;min-height:60px;cursor:pointer}
@@ -61,13 +61,7 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .foto-prev{max-width:100%;max-height:340px;border:3px solid #999;border-radius:12px;display:block;margin:12px auto}
 .pie{margin-top:40px;font-size:.9rem;color:#444;text-align:center}
 .pie button{font-size:.95rem;background:none;border:none;color:var(--azul);text-decoration:underline;cursor:pointer;min-height:48px}
-.hoja{border:2px solid #000;padding:26px;font-size:16px;line-height:1.35;background:#fff;color:#000;max-width:800px;margin:0 auto}
-.hoja h1{font-size:28px;margin:0 0 4px}.hoja .cab2{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.hoja table{font-size:15px}.hoja th{border-bottom:2px solid #000}.hoja .tot{margin-left:auto;width:280px;max-width:100%;margin-top:14px}
-.hoja .tot div{display:flex;justify-content:space-between;padding:3px 0}.hoja .tot .g{font-weight:700;font-size:20px;border-top:2px solid #000}
-.hoja .nota{font-size:12px;color:#444;margin-top:24px}
-@media (max-width:520px){html{font-size:20px}.big{min-height:110px;font-size:1.4rem}.big .ico{font-size:2.4rem}.linea .dos{grid-template-columns:1fr}.mic{width:180px;height:180px}.hoja{padding:12px}}
-@media print{.no-print,.top,.demo-banner,.toast{display:none!important}main{padding:0;max-width:none}.hoja{border:none;padding:0}body{background:#fff}}
+
 .dos-col{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
 .dos-col .big{min-height:120px}
 .check{display:flex;align-items:center;gap:14px;font-size:1.15rem;margin:18px 0;padding:12px 14px;border:3px solid var(--linea);border-radius:14px;background:var(--card);cursor:pointer}
@@ -84,3 +78,59 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .estado.rechazado{color:var(--rojo);background:#fdecef;border-color:var(--rojo)}
 a{color:var(--azul2)}
 main:focus{outline:none}
+
+/* Configuración de factura */
+.config-btn{margin-top:18px;flex-wrap:wrap}.config-btn small{font-weight:400;font-size:.9rem}
+.logo-caja{text-align:center}
+.logo-prev{max-width:100%;max-height:120px;display:block;margin:6px auto;background:#fff;border-radius:10px;padding:6px}
+.sin-logo{color:var(--gris);font-style:italic;margin:10px 0}
+.colores{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.color{display:flex;align-items:center;gap:12px;margin:0;padding:12px 14px;border:3px solid var(--linea);border-radius:14px;background:var(--card);cursor:pointer;font-weight:700}
+.color input{width:28px;height:28px;min-height:0;margin:0;flex:none;accent-color:var(--azul2)}
+.color .muestra{width:36px;height:36px;border-radius:50%;flex:none;border:2px solid #fff;box-shadow:0 0 0 2px var(--linea)}
+.color:has(input:checked){border-color:var(--azul2);background:#fff}
+
+/* Hoja de factura / presupuesto (pantalla e impresión A4) */
+.hoja{--acento:#0891b2;position:relative;max-width:794px;margin:20px auto 0;padding:40px 44px 30px;background:#fff;color:#1d2735;font-size:14px;line-height:1.45;border-radius:14px;box-shadow:0 10px 30px rgba(7,11,20,.14);border-top:10px solid var(--acento);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.hoja b{color:#0f1726}
+.h-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding-bottom:22px;border-bottom:2px solid #e6edf5}
+.h-logo{max-height:80px;max-width:280px;display:block}
+.h-marca{font-size:30px;font-weight:800;color:var(--acento);letter-spacing:-.01em;line-height:1.1;max-width:360px}
+.h-razon{margin-top:6px;font-size:13px;color:#5c6e84;font-weight:600}
+.h-der{text-align:right}
+.h-tipo{font-size:30px;font-weight:800;letter-spacing:.18em;color:var(--acento);line-height:1}
+.h-meta{margin-top:12px;display:inline-grid;gap:4px;font-size:14px}
+.h-meta div{display:flex;justify-content:flex-end;gap:12px}.h-meta span{color:#5c6e84;text-transform:uppercase;font-size:11px;letter-spacing:.08em;align-self:center}
+.h-partes{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0}
+.h-parte{background:#f3f7fb;border-radius:10px;padding:14px 16px;border-left:4px solid var(--acento)}
+.h-et{text-transform:uppercase;font-size:11px;letter-spacing:.12em;color:var(--acento);font-weight:800;margin-bottom:4px}
+.h-tabla{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.h-tabla th{background:var(--acento);color:#fff;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.06em;padding:10px;border:none}
+.h-tabla th:first-child{border-radius:8px 0 0 8px}.h-tabla th:last-child{border-radius:0 8px 8px 0}
+.h-tabla td{padding:11px 10px;border-bottom:1px solid #e6edf5}
+.h-tabla tbody tr:nth-child(even) td{background:#f8fafd}
+.h-tabla .n{width:34px;color:#8796a8;text-align:center}.h-tabla .b{font-weight:700}
+.h-tabla tr{break-inside:avoid;page-break-inside:avoid}
+.h-final{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-top:22px;break-inside:avoid;page-break-inside:avoid}
+.h-izq2{flex:1;min-width:0}
+.h-pago{background:#f3f7fb;border-radius:10px;padding:12px 16px;font-size:13px}
+.h-peq{font-size:12px;color:#5c6e84}
+.h-tot{width:300px;max-width:100%;flex:none;font-size:14px}
+.h-tot div{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #e6edf5}
+.h-tot span:last-child{white-space:nowrap}
+.h-tot .g{margin-top:8px;border:none;background:var(--acento);color:#fff;border-radius:10px;padding:12px 14px;font-size:20px;font-weight:800}
+.h-pie{margin-top:30px;padding-top:14px;border-top:2px solid #e6edf5;text-align:center}
+.h-nota{font-size:14px;font-weight:600;color:var(--acento);margin-bottom:6px}
+.hoja .nota{font-size:10.5px;color:#8796a8;margin:0}
+@page{size:A4;margin:12mm}
+@media print{
+  .no-print,.top,.demo-banner,.toast{display:none!important}
+  html{font-size:16px}
+  body{background:#fff!important;background-image:none!important}
+  main{padding:0;max-width:none;margin:0}
+  .hoja{box-shadow:none;border-radius:0;margin:0;max-width:none;width:100%;padding:0 2mm;border-top:none}
+  .hoja::before{content:"";display:block;height:6px;background:var(--acento);margin-bottom:22px;border-radius:3px}
+  .h-partes,.h-cab{break-inside:avoid}
+}
+@media (max-width:620px){.hoja{padding:22px 16px}.h-cab,.h-final{flex-direction:column}.h-der{text-align:left}.h-meta div{justify-content:flex-start}.h-partes{grid-template-columns:1fr}.h-tot{width:100%}.h-tipo,.h-marca{font-size:24px}}
+@media (max-width:520px){html{font-size:20px}.big{min-height:110px;font-size:1.4rem}.big .ico{font-size:2.4rem}.linea .dos{grid-template-columns:1fr}.mic{width:180px;height:180px}}

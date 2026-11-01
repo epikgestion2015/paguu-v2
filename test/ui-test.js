@@ -24,7 +24,7 @@ const hoy = new Date(), HOY = iso(hoy), Y = hoy.getFullYear();
 const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1); const AYER = iso(ayer);
 const set = (id, v) => { const e = $(id); e.value = v; e.dispatchEvent(new w.Event('input', { bubbles: true })); e.dispatchEvent(new w.Event('change', { bubbles: true })); };
 const submit = async id => { $(id).dispatchEvent(new w.Event('submit', { cancelable: true })); await wait(20); };
-const eur = n => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const eur = n => { const p = (Math.round(n * 100) / 100).toFixed(2).split('.'); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1]; };
 (async () => {
   await wait(20);
   // INICIO
@@ -37,6 +37,48 @@ const eur = n => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFr
   check('inicio: total del año y nº de facturas', $('kAnyo').textContent.includes(eur(fAn.reduce((a, f) => a + f.total, 0)) + ' €') && $('kAnyo').textContent.includes(fAn.length + ' factura'));
   check('inicio: presupuestos pendientes = 2', /pendientes\s*2/.test($('kPend').textContent) && $('pendientes').querySelectorAll('.fac').length === 2);
   check('inicio: últimas 5 facturas', $('ultimas').querySelectorAll('.fac').length === 5);
+  check('importes con punto de miles en inicio (si pasa de 1.000 €)', fAn.reduce((a, f) => a + f.total, 0) < 1000 || /\d\.\d{3},\d{2} €/.test($('kAnyo').textContent));
+  check('inicio: botón Configuración de factura y aviso de poner logo', $('irConfig') && /Configuración de factura/.test($('irConfig').textContent) && $('avisoConfig'));
+
+  // FACTURA DEMO con diseño nuevo
+  await go('#/doc/' + D0.facturas[D0.facturas.length - 1].id);
+  check('hoja: cabecera con nombre (sin logo), De/Para, tabla, totales, IBAN y nota', $('hMarca') && $('hMarca').textContent === 'Demo Paguu' && !$('hLogo') && $('hEmisor').textContent.includes('B00000992') && $('hCliente') && d.querySelector('.h-tabla thead') && d.querySelector('.h-tot .g') && /ES28 0000 0000 0012 3456 7890/.test($('hPago').textContent) && $('hNota'));
+  check('hoja: color de acento turquesa', /--acento:#0891b2/.test($('hoja').getAttribute('style')));
+
+  // CONFIGURACIÓN DE FACTURA
+  await go('#/config');
+  check('config: pantalla con logo, nombre comercial, datos, IBAN, nota y 4 colores', /Configuración de factura/.test(txt()) && $('elogo') && $('ecom') && $('enom') && $('enif') && $('edir') && $('etel') && $('email') && $('eiban') && $('enota') && d.querySelectorAll('input[name="ecolor"]').length === 4 && $('sinLogo'));
+  set('enom', ''); await submit('eform');
+  check('config: sin nombre no guarda', /Falta su nombre/.test($('aviso').textContent));
+  set('enom', 'Pepe Inventado López'); set('enif', '');
+  await submit('eform');
+  check('config: NIF obligatorio', /Falta su NIF/.test($('aviso').textContent));
+  set('enif', '00000000T');
+  check('config: NIF validado', /NIF correcto/.test($('enifinfo').textContent));
+  set('eiban', 'ES28 0000 0000 0012 3456 7891');
+  check('config: aviso de IBAN incorrecto', /Revise el IBAN/.test($('eibaninfo').textContent));
+  await submit('eform');
+  check('config: IBAN incorrecto no guarda', datos().empresa.name !== 'Pepe Inventado López');
+  set('eiban', 'es28 0000 0000 0012 3456 7890'); set('ecom', 'Fontanería Pepe'); set('enota', 'Pago a 15 días. ¡Gracias!');
+  d.querySelector('input[name="ecolor"][value="verde"]').checked = true; d.querySelector('input[name="ecolor"][value="verde"]').dispatchEvent(new w.Event('change'));
+  await submit('eform');
+  const E1 = datos().empresa;
+  check('config: guarda datos del emisor', E1.name === 'Pepe Inventado López' && E1.nif === '00000000T' && E1.comercial === 'Fontanería Pepe' && E1.iban === 'ES2800000000001234567890' && E1.color === 'verde' && w.location.hash === '#/');
+  check('inicio: sin aviso de demo tras configurar', !$('avisoConfig'));
+  await go('#/doc/' + D0.facturas[0].id);
+  check('hoja: refleja nombre comercial, razón social, NIF, nota y color verde', $('hMarca').textContent === 'Fontanería Pepe' && /Pepe Inventado López/.test($('hEmisor').textContent) && /00000000T/.test($('hEmisor').textContent) && /Pago a 15 días/.test($('hNota').textContent) && /--acento:#0f8a5f/.test($('hoja').getAttribute('style')));
+  // logo (en jsdom no hay canvas: se guarda un dataURL directamente)
+  const L = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const st = datos(); st.empresa.logo = L; w.localStorage.setItem('paguuV2.datos.v2', JSON.stringify(st)); w.PAGUUV2.recarga(); await wait(20);
+  check('hoja: con logo sale la imagen en vez del nombre', $('hLogo') && $('hLogo').getAttribute('src') === L && !$('hMarca'));
+  await go('#/config');
+  check('config: muestra el logo guardado y botón quitar', $('logoImg') && !$('equitalogo').hidden);
+  $('equitalogo').click(); await submit('eform');
+  check('config: quitar logo', datos().empresa.logo === '');
+  await go('#/doc/' + D0.presupuestos[1].id);
+  check('presupuesto: hoja con PRESUPUESTO, válido hasta y condiciones', /PRESUPUESTO/.test(txt()) && /Válido hasta/.test(txt()) && /Condiciones/.test(txt()));
+  // volver a demo para el resto de pruebas
+  w.localStorage.removeItem('paguuV2.datos.v2'); w.PAGUUV2.recarga(); await wait(20);
 
   // FACTURA con cliente nuevo y "guardar cliente"
   await go('#/nueva/factura');
